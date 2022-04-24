@@ -45,13 +45,23 @@ We check the current validator's signatures over the hash of the transaction bat
 
 Now we are ready to make the transfers. We iterate over all the transactions in the batch and do the transfers. We also add up the fees and transfer them to msg.sender.
 
+### submitLogicCall
+
+This is how Gravity triggers arbitrary functionality on Ethereum. Validation of validator signatures is the same as for `submitBatch`. Instead of batch nonces, logic calls use a more general invalidation nonce scheme. This is explained [here](/docs/design/arbitrary-logic.md#invalidation).
+
+After this, several things happen. First of all, some tokens are (optionally) sent to the logic contract. This is to enable functionality like having the bridge put money into DeFi vaults etc.
+
+Next, the actual call is made to the contract. This uses Solidity's ability to send arbitrary serialized function calls to any contract. One very important thing to note is that the call comes from the deployed Gravity.sol contract. This means it may be able to spend the bridge's tokens. For this reason, it is NOT safe to allow users to supply their own inputs to this function.
+
+After this, a fee is sent to the the relayer.
+
 ### sendToCosmos
 
 This is used to transfer tokens from an Ethereum address to a Tendermint address. It is extremely simple, because everything really happens on the Tendermint side. The transferred tokens are locked in the contract, then an event is emitted. The Tendermint validators see this event and mint tokens on the Tendermint side.
 
 ## Events
 
-We emit 3 different events, each of which has a distinct purpose. 2 of these events contain a field called _eventNonce, which is used by the Tendermint chain to ensure that the events are not out of order. This is incremented each time one of the events is emitted.
+We emit 3 different events, each of which has a distinct purpose. 2 of these events contain a field called _eventNonce_, which is used by the Tendermint chain to ensure that the events are not out of order. This is incremented each time one of the events is emitted.
 
 ### TransactionBatchExecutedEvent
 
